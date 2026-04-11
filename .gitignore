@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+*.log
+.personal_data_agent/
+.vscode/
+note/
+# local embedding model
+bge-base-zh-v1.5/

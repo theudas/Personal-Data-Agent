@@ -1,0 +1,6 @@
+openai>=1.40.0
+numpy>=1.26.0
+sentence-transformers>=2.7.0
+torch>=2.2.0
+scipy>=1.11.0
+streamlit>=1.36.0
