@@ -95,12 +95,7 @@ class PersonalDataAgent:
 
             if not msg.tool_calls:
                 final_answer = msg.content or ""
-                self.dialog_history.extend(
-                    [
-                        {"role": "user", "content": user_input},
-                        {"role": "assistant", "content": final_answer},
-                    ]
-                )
+                self._remember_dialog_turn(user_input, final_answer)
                 return AgentRunResult(answer=final_answer, tool_trace=tool_trace)
 
             for tool_call in msg.tool_calls:
@@ -137,13 +132,22 @@ class PersonalDataAgent:
                         pass
 
                 signature = f"{tool_name}:{raw_args}"
+                terminal_answer: str | None = None
                 if tool_result.get("ok") is False:
                     failed_signatures[signature] = failed_signatures.get(signature, 0) + 1
+                    terminal_answer = self._maybe_build_terminal_tool_error_answer(
+                        tool_name=tool_name,
+                        raw_args=raw_args,
+                        tool_result=tool_result,
+                        failure_count=failed_signatures[signature],
+                    )
                     if failed_signatures[signature] >= 2:
                         tool_result = {
                             "ok": False,
                             "error": "Repeated tool failure. Please revise plan or use different tool.",
                         }
+                        if terminal_answer is None:
+                            terminal_answer = self._build_repeated_tool_failure_answer(tool_name, raw_args)
 
                 messages.append(
                     {
@@ -153,6 +157,9 @@ class PersonalDataAgent:
                         "content": json.dumps(tool_result, ensure_ascii=False),
                     }
                 )
+                if terminal_answer is not None:
+                    self._remember_dialog_turn(user_input, terminal_answer)
+                    return AgentRunResult(answer=terminal_answer, tool_trace=tool_trace)
 
         return AgentRunResult(
             answer="达到最大推理步数，已停止。请把任务拆小后继续。",
@@ -198,6 +205,88 @@ class PersonalDataAgent:
             return out
         except ToolExecutionError as exc:
             return {"ok": False, "error": str(exc)}
+
+    def _remember_dialog_turn(self, user_input: str, assistant_output: str) -> None:
+        self.dialog_history.extend(
+            [
+                {"role": "user", "content": user_input},
+                {"role": "assistant", "content": assistant_output},
+            ]
+        )
+
+    def _maybe_build_terminal_tool_error_answer(
+        self,
+        tool_name: str,
+        raw_args: Any,
+        tool_result: dict[str, Any],
+        failure_count: int,
+    ) -> str | None:
+        error = tool_result.get("error")
+        if not isinstance(error, str):
+            return None
+
+        if error.startswith("Path not found: "):
+            target = self._extract_tool_target(raw_args, "filename", "directory") or error.removeprefix("Path not found: ")
+            kind = "目录" if tool_name == "list_notes" else "文件"
+            return (
+                f"未找到你请求的{kind}：`{target}`。"
+                "我现在无法继续读取它。请确认名称或路径是否正确，或先查看当前笔记目录中的可用文件后再试。"
+            )
+
+        if error.startswith("Not a file: "):
+            target = self._extract_tool_target(raw_args, "filename") or error.removeprefix("Not a file: ")
+            return f"`{target}` 不是可读取的文件，所以我无法按“读取文件”的方式处理它。请换一个具体文件名后重试。"
+
+        if error.startswith("Not a directory: "):
+            target = self._extract_tool_target(raw_args, "directory") or error.removeprefix("Not a directory: ")
+            return f"`{target}` 不是目录，所以我无法列出其中的笔记。请确认目录路径后再试。"
+
+        if error.startswith("Access denied: "):
+            return "请求的路径超出了当前允许访问的笔记目录范围，所以我不能读取它。请提供笔记目录内的文件路径。"
+
+        if error == "Only .txt / .md / .markdown files are supported":
+            return "当前只支持 `.txt`、`.md` 和 `.markdown` 文件。我暂时不能读取这个类型的文件，请换成受支持的文本笔记。"
+
+        if failure_count >= 2:
+            return self._build_repeated_tool_failure_answer(tool_name, raw_args)
+
+        return None
+
+    def _build_repeated_tool_failure_answer(self, tool_name: str, raw_args: Any) -> str:
+        target = self._extract_tool_target(raw_args, "filename", "directory")
+        action = {
+            "read_note": "读取文件",
+            "delete_note": "删除文件",
+            "extract_highlights": "提取文件重点",
+            "list_notes": "列出目录内容",
+        }.get(tool_name, "执行该操作")
+        if target:
+            return (
+                f"我尝试对 `{target}` {action} 时连续失败，继续重复同样的工具调用意义不大。"
+                "请确认路径是否正确，或换一种更明确的请求方式后再试。"
+            )
+        return "我连续两次执行同类工具调用都失败了。为避免无效循环，我先停止并把错误返回给你，请调整请求后再试。"
+
+    def _extract_tool_target(self, raw_args: Any, *keys: str) -> str | None:
+        parsed: dict[str, Any] | None = None
+        if isinstance(raw_args, dict):
+            parsed = raw_args
+        elif isinstance(raw_args, str):
+            try:
+                loaded = json.loads(raw_args)
+            except json.JSONDecodeError:
+                loaded = None
+            if isinstance(loaded, dict):
+                parsed = loaded
+
+        if not parsed:
+            return None
+
+        for key in keys:
+            value = parsed.get(key)
+            if isinstance(value, str) and value:
+                return value
+        return None
 
 
 def build_agent(
