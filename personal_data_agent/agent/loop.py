@@ -8,7 +8,13 @@ from typing import Any, Callable
 from openai import OpenAI
 
 from personal_data_agent.agent.prompts import build_system_prompt
-from personal_data_agent.config import AgentConfig
+from personal_data_agent.config import (
+    AgentConfig,
+    DEFAULT_API_KEY,
+    DEFAULT_BASE_URL,
+    DEFAULT_EMBEDDING_MODEL_PATH,
+    DEFAULT_MODEL_NAME,
+)
 from personal_data_agent.runtime.errors import AgentError, SecurityError, ToolExecutionError, ValidationError
 from personal_data_agent.runtime.retry import with_retry
 from personal_data_agent.runtime.schema import parse_tool_args, validate_tool_args
@@ -196,10 +202,10 @@ class PersonalDataAgent:
 
 def build_agent(
     notes_root: str,
-    embedding_model_path: str = "./bge-base-zh-v1.5",
-    model_name: str = "modelscope.cn/Qwen/Qwen3-8B-GGUF:latest",
-    base_url: str = "http://localhost:11434/v1",
-    api_key: str = "ollama",
+    embedding_model_path: str = DEFAULT_EMBEDDING_MODEL_PATH,
+    model_name: str = DEFAULT_MODEL_NAME,
+    base_url: str = DEFAULT_BASE_URL,
+    api_key: str = DEFAULT_API_KEY,
 ) -> PersonalDataAgent:
     cfg = AgentConfig(
         notes_root=Path(notes_root),

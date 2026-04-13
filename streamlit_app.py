@@ -2,17 +2,26 @@ from __future__ import annotations
 
 import html
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.web.bootstrap import run as streamlit_bootstrap_run
 
 from personal_data_agent.agent.loop import build_agent
+from personal_data_agent.config import (
+    DEFAULT_API_KEY as CONFIG_DEFAULT_API_KEY,
+    DEFAULT_BASE_URL as CONFIG_DEFAULT_BASE_URL,
+    DEFAULT_EMBEDDING_MODEL_PATH as CONFIG_DEFAULT_EMBEDDING_MODEL_PATH,
+    DEFAULT_MODEL_NAME as CONFIG_DEFAULT_MODEL_NAME,
+)
 
-DEFAULT_MODEL = "modelscope.cn/Qwen/Qwen3-8B-GGUF:latest"
-DEFAULT_BASE_URL = "http://localhost:11434/v1"
-DEFAULT_API_KEY = "ollama"
-DEFAULT_EMBEDDING = "./bge-base-zh-v1.5"
+DEFAULT_MODEL = CONFIG_DEFAULT_MODEL_NAME
+DEFAULT_BASE_URL = CONFIG_DEFAULT_BASE_URL
+DEFAULT_API_KEY = CONFIG_DEFAULT_API_KEY
+DEFAULT_EMBEDDING = CONFIG_DEFAULT_EMBEDDING_MODEL_PATH
 DEFAULT_NOTES_DIR = "./note"
 
 
@@ -251,5 +260,12 @@ def main() -> None:
         _render_tool_trace(trace, prefix="本轮")
 
 
-if __name__ == "__main__":
+def _launch() -> None:
+    if get_script_run_ctx(suppress_warning=True) is None:
+        streamlit_bootstrap_run(str(Path(__file__).resolve()), False, sys.argv[1:], {})
+        return
     main()
+
+
+if __name__ == "__main__":
+    _launch()

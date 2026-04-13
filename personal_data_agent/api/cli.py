@@ -5,19 +5,25 @@ import json
 from pathlib import Path
 
 from personal_data_agent.agent.loop import build_agent
+from personal_data_agent.config import (
+    DEFAULT_API_KEY,
+    DEFAULT_BASE_URL,
+    DEFAULT_EMBEDDING_MODEL_PATH,
+    DEFAULT_MODEL_NAME,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Personal Data Assistant Agent (Ollama + Qwen3-8B)")
     parser.add_argument("--notes-dir", required=True, help="用户笔记根目录，Agent 只能访问该目录")
-    parser.add_argument("--embedding-model", default="./bge-base-zh-v1.5", help="embedding 模型路径")
+    parser.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL_PATH, help="embedding 模型路径")
     parser.add_argument(
         "--model",
-        default="modelscope.cn/Qwen/Qwen3-8B-GGUF:latest",
+        default=DEFAULT_MODEL_NAME,
         help="Ollama 部署的模型名",
     )
-    parser.add_argument("--base-url", default="http://localhost:11434/v1", help="Ollama OpenAI 兼容接口")
-    parser.add_argument("--api-key", default="ollama", help="Ollama API key (默认 ollama)")
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Ollama OpenAI 兼容接口")
+    parser.add_argument("--api-key", default=DEFAULT_API_KEY, help="Ollama API key (默认 ollama)")
     parser.add_argument("--query", default=None, help="单轮问题；不填则进入交互模式")
     parser.add_argument("--show-trace", action="store_true", help="输出工具调用轨迹")
     return parser
