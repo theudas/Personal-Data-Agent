@@ -19,11 +19,21 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "list_notes",
-                "description": "列出目录下所有笔记及最后修改时间",
+                "description": (
+                    "列出指定目录及其子目录下的所有可访问笔记文件，并返回文件名和最后修改时间。"
+                    "适用于确认某个文件是否存在、查看某个目录里有哪些笔记。"
+                    "不适用于按主题搜索内容，也不适用于读取文件正文。"
+                ),
                 "parameters": {
                     "type": "object",
-                    "properties": {"directory": {"type": "string"}},
+                    "properties": {
+                        "directory": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的目录路径。根目录可传 `.`。",
+                        }
+                    },
                     "required": ["directory"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -31,11 +41,21 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "semantic_search",
-                "description": "语义检索笔记切片，返回最相关片段及文件名",
+                "description": (
+                    "按主题、问题或关键词对全部笔记做语义检索，返回最相关的文本片段及来源文件。"
+                    "适用于用户没有给出明确文件名，只描述了概念、问题或主题的场景。"
+                    "如果已经知道准确文件名并需要全文，应优先使用 read_note。"
+                ),
                 "parameters": {
                     "type": "object",
-                    "properties": {"query": {"type": "string"}},
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "要检索的主题、问题或关键词，使用自然语言描述，不要填文件路径。",
+                        }
+                    },
                     "required": ["query"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -43,11 +63,21 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_note",
-                "description": "读取完整笔记",
+                "description": (
+                    "读取单个笔记文件的完整正文。"
+                    "适用于已知准确文件名，需要查看全文、总结或回答基于该文件的问题。"
+                    "不适用于仅判断文件是否存在或按主题找内容；这些场景优先使用 list_notes 或 semantic_search。"
+                ),
                 "parameters": {
                     "type": "object",
-                    "properties": {"filename": {"type": "string"}},
+                    "properties": {
+                        "filename": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的文件路径，例如 `DPO总结.md` 或 `rl/notes.md`。应是文件，不是目录。",
+                        }
+                    },
                     "required": ["filename"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -55,14 +85,25 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_note",
-                "description": "新建或覆盖笔记",
+                "description": (
+                    "创建新笔记或用新内容完整覆盖已有笔记。"
+                    "只有在用户明确要求新建、保存或覆盖文件时才能使用。"
+                    "如果只是想在末尾补充内容，应优先使用 append_note。"
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {"type": "string"},
-                        "content": {"type": "string"},
+                        "filename": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的目标文件路径，必须是 `.txt`、`.md` 或 `.markdown` 文件。",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "要写入文件的完整内容。该工具会覆盖原文件全部内容。",
+                        },
                     },
                     "required": ["filename", "content"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -70,14 +111,25 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "append_note",
-                "description": "追加写入笔记末尾",
+                "description": (
+                    "在笔记文件末尾追加内容；如果文件不存在则新建。"
+                    "只有在用户明确要求追加、补充到末尾时才能使用。"
+                    "如果需要完全改写文件内容，应优先使用 write_note。"
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {"type": "string"},
-                        "content": {"type": "string"},
+                        "filename": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的目标文件路径，必须是 `.txt`、`.md` 或 `.markdown` 文件。",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "要追加到文件末尾的文本内容。",
+                        },
                     },
                     "required": ["filename", "content"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -85,13 +137,21 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "delete_note",
-                "description": "删除指定笔记文件",
+                "description": (
+                    "删除指定笔记文件。"
+                    "这是破坏性操作，只有在用户明确要求删除某个文件时才能使用。"
+                    "不适用于清空内容、重写内容或读取内容。"
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {"type": "string"},
+                        "filename": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的目标文件路径，必须指向具体文件，不能是目录。",
+                        },
                     },
                     "required": ["filename"],
+                    "additionalProperties": False,
                 },
             },
         },
@@ -99,14 +159,25 @@ def get_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "extract_highlights",
-                "description": "按 focus 提取关键部分并结构化输出",
+                "description": (
+                    "围绕指定 focus 从单个文件中提取结构化重点，返回 summary、key_points、action_items、risks、quotes 等字段。"
+                    "适用于用户要某份笔记的重点、行动项、风险或摘要，且目标文件已经确定。"
+                    "不适用于跨多个文件找内容，也不适用于读取原文全文。"
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filename": {"type": "string"},
-                        "focus": {"type": "string"},
+                        "filename": {
+                            "type": "string",
+                            "description": "相对于笔记根目录的目标文件路径，应为一个已确定的单个笔记文件。",
+                        },
+                        "focus": {
+                            "type": "string",
+                            "description": "提炼重点时关注的角度，例如“会议决策”“风险点”“后续行动”“DPO 核心结论”。",
+                        },
                     },
                     "required": ["filename", "focus"],
+                    "additionalProperties": False,
                 },
             },
         },
