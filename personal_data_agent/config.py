@@ -7,6 +7,7 @@ DEFAULT_EMBEDDING_MODEL_PATH = "./bge-base-zh-v1.5"
 DEFAULT_MODEL_NAME = "modelscope.cn/dDreamer/qwen3-8b-toolcalling-1e-4-r16-500steps-gguf:latest"
 DEFAULT_BASE_URL = "http://localhost:11434/v1"
 DEFAULT_API_KEY = "ollama"
+DEFAULT_TEMPERATURE = 0.2
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class AgentConfig:
     model_name: str = DEFAULT_MODEL_NAME
     base_url: str = DEFAULT_BASE_URL
     api_key: str = DEFAULT_API_KEY
+    temperature: float = DEFAULT_TEMPERATURE
     max_steps: int = 8
     max_tool_calls: int = 24
     top_k: int = 5
@@ -27,5 +29,7 @@ class AgentConfig:
         return self.notes_root / ".personal_data_agent" / "index"
 
     def ensure_paths(self) -> None:
+        if not 0 <= self.temperature <= 2:
+            raise ValueError("temperature 必须在 0 到 2 之间")
         self.notes_root.mkdir(parents=True, exist_ok=True)
         self.index_dir.mkdir(parents=True, exist_ok=True)

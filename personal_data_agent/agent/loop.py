@@ -14,6 +14,7 @@ from personal_data_agent.config import (
     DEFAULT_BASE_URL,
     DEFAULT_EMBEDDING_MODEL_PATH,
     DEFAULT_MODEL_NAME,
+    DEFAULT_TEMPERATURE,
 )
 from personal_data_agent.runtime.errors import AgentError, SecurityError, ToolExecutionError, ValidationError
 from personal_data_agent.runtime.retry import with_retry
@@ -48,6 +49,7 @@ class PersonalDataAgent:
                 vector_index=self.vector_index,
                 llm_client=self.client,
                 llm_model=self.config.model_name,
+                llm_temperature=self.config.temperature,
                 top_k=self.config.top_k,
             )
         )
@@ -174,7 +176,7 @@ class PersonalDataAgent:
                     messages=messages,
                     tools=self.tools,
                     tool_choice="auto",
-                    temperature=0.2,
+                    temperature=self.config.temperature,
                 )
             except Exception as exc:
                 raise ToolExecutionError(f"LLM request failed: {exc}", retriable=True) from exc
@@ -295,6 +297,7 @@ def build_agent(
     model_name: str = DEFAULT_MODEL_NAME,
     base_url: str = DEFAULT_BASE_URL,
     api_key: str = DEFAULT_API_KEY,
+    temperature: float = DEFAULT_TEMPERATURE,
 ) -> PersonalDataAgent:
     cfg = AgentConfig(
         notes_root=Path(notes_root),
@@ -302,5 +305,6 @@ def build_agent(
         model_name=model_name,
         base_url=base_url,
         api_key=api_key,
+        temperature=temperature,
     )
     return PersonalDataAgent(cfg)

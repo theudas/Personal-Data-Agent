@@ -16,12 +16,14 @@ from personal_data_agent.config import (
     DEFAULT_BASE_URL as CONFIG_DEFAULT_BASE_URL,
     DEFAULT_EMBEDDING_MODEL_PATH as CONFIG_DEFAULT_EMBEDDING_MODEL_PATH,
     DEFAULT_MODEL_NAME as CONFIG_DEFAULT_MODEL_NAME,
+    DEFAULT_TEMPERATURE as CONFIG_DEFAULT_TEMPERATURE,
 )
 
 DEFAULT_MODEL = CONFIG_DEFAULT_MODEL_NAME
 DEFAULT_BASE_URL = CONFIG_DEFAULT_BASE_URL
 DEFAULT_API_KEY = CONFIG_DEFAULT_API_KEY
 DEFAULT_EMBEDDING = CONFIG_DEFAULT_EMBEDDING_MODEL_PATH
+DEFAULT_TEMPERATURE = CONFIG_DEFAULT_TEMPERATURE
 DEFAULT_NOTES_DIR = "./note"
 
 
@@ -38,6 +40,7 @@ def _init_state() -> None:
     st.session_state.setdefault("cfg_base_url", DEFAULT_BASE_URL)
     st.session_state.setdefault("cfg_api_key", DEFAULT_API_KEY)
     st.session_state.setdefault("cfg_embedding", DEFAULT_EMBEDDING)
+    st.session_state.setdefault("cfg_temperature", float(DEFAULT_TEMPERATURE))
 
 
 def _inject_css() -> None:
@@ -165,6 +168,7 @@ def _switch_agent(notes_dir: str) -> None:
         model_name=st.session_state.cfg_model_name,
         base_url=st.session_state.cfg_base_url,
         api_key=st.session_state.cfg_api_key,
+        temperature=float(st.session_state.cfg_temperature),
     )
     st.session_state.current_notes_dir = str(target)
     st.session_state.notes_dir_input = str(target)
@@ -183,13 +187,34 @@ def _on_notes_dir_change() -> None:
         st.session_state.notes_dir_error = str(exc)
 
 
+def _on_agent_config_change() -> None:
+    target_dir = (st.session_state.notes_dir_input or st.session_state.current_notes_dir or "").strip()
+    if not target_dir:
+        st.session_state.notes_dir_error = "目录不能为空。"
+        return
+
+    try:
+        _switch_agent(target_dir)
+    except Exception as exc:
+        st.session_state.notes_dir_error = str(exc)
+
+
 def _render_sidebar() -> None:
     with st.sidebar:
         st.header("Agent 配置")
-        st.text_input("模型", key="cfg_model_name")
-        st.text_input("Embedding 路径", key="cfg_embedding")
-        st.text_input("Ollama Base URL", key="cfg_base_url")
-        st.text_input("API Key", key="cfg_api_key", type="password")
+        st.text_input("模型", key="cfg_model_name", on_change=_on_agent_config_change)
+        st.number_input(
+            "Temperature",
+            key="cfg_temperature",
+            min_value=0.0,
+            max_value=2.0,
+            step=0.05,
+            format="%.2f",
+            on_change=_on_agent_config_change,
+        )
+        st.text_input("Embedding 路径", key="cfg_embedding", on_change=_on_agent_config_change)
+        st.text_input("Ollama Base URL", key="cfg_base_url", on_change=_on_agent_config_change)
+        st.text_input("API Key", key="cfg_api_key", type="password", on_change=_on_agent_config_change)
 
         st.text_input(
             "笔记目录",

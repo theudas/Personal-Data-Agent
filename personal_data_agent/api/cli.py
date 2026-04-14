@@ -10,6 +10,7 @@ from personal_data_agent.config import (
     DEFAULT_BASE_URL,
     DEFAULT_EMBEDDING_MODEL_PATH,
     DEFAULT_MODEL_NAME,
+    DEFAULT_TEMPERATURE,
 )
 
 
@@ -24,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Ollama OpenAI 兼容接口")
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help="Ollama API key (默认 ollama)")
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, help="模型 temperature，范围 0 到 2")
     parser.add_argument("--query", default=None, help="单轮问题；不填则进入交互模式")
     parser.add_argument("--show-trace", action="store_true", help="输出工具调用轨迹")
     return parser
@@ -39,6 +41,7 @@ def main() -> None:
         model_name=args.model,
         base_url=args.base_url,
         api_key=args.api_key,
+        temperature=args.temperature,
     )
 
     if args.query:

@@ -149,9 +149,18 @@ streamlit run streamlit_app.py
 
 界面能力：
 - 侧边栏直接编辑笔记目录，修改后自动生效
+- 侧边栏可直接调整模型 `temperature`，修改后会自动重建 Agent 并生效
 - 运行过程中实时显示工具调用（工具名、参数、返回值）
 - 工具调用区为浅色可折叠
 - 用户与助手最终回复为深色消息气泡
+
+当前 Streamlit 侧边栏支持调整这些配置项：
+- 模型名
+- `temperature`（范围 `0` 到 `2`，默认 `0.2`）
+- Embedding 路径
+- Ollama Base URL
+- API Key
+- 笔记目录
 
 ### 单轮问答
 
@@ -159,6 +168,7 @@ streamlit run streamlit_app.py
 python main.py \
   --notes-dir /path/to/your/notes \
   --embedding-model ./bge-base-zh-v1.5 \
+  --temperature 0.0 \
   --query "帮我总结今天的会议纪要" \
   --show-trace
 ```
@@ -166,10 +176,19 @@ python main.py \
 ### 交互模式
 
 ```bash
-python main.py --notes-dir /path/to/your/notes --embedding-model ./bge-base-zh-v1.5
+python main.py --notes-dir /path/to/your/notes --embedding-model ./bge-base-zh-v1.5 --temperature 0.2
 ```
 
 输入 `exit` 退出。
+
+### CLI 参数补充
+
+- `--temperature`：控制模型采样温度，范围 `0` 到 `2`，默认值为 `0.2`
+- 该参数会同时作用于：
+  - 主 Agent 的工具调用与最终回答生成
+  - `extract_highlights` 工具内部的结构化提取调用
+
+如果你希望尽量减少幻觉，建议先从 `--temperature 0.0` 或 `--temperature 0.1` 开始测试。
 
 ## 4. 核心能力与实现映射
 
@@ -186,6 +205,7 @@ python main.py --notes-dir /path/to/your/notes --embedding-model ./bge-base-zh-v
 ### 4.2 多步工具调用
 - `max_steps` 控制最大推理轮数
 - `max_tool_calls` 控制单次请求内总工具调用上限
+- `temperature` 控制主模型和 `extract_highlights` 内部模型调用的采样温度
 - 单轮模型可发多个 `tool_calls`，代码逐个执行并回填
 
 ### 4.3 错误处理与重试
@@ -247,3 +267,7 @@ hf download BAAI/bge-base-zh-v1.5 --local-dir ./bge-base-zh-v1.5
 
 3. `检索为空`
 - 确保目录下存在 `.txt/.md/.markdown` 文件。
+
+4. `回答幻觉偏多`
+- 可以先把 CLI 的 `--temperature` 或 Streamlit 侧边栏里的 `temperature` 调低到 `0.0` 或 `0.1`。
+- 当前默认值是 `0.2`，会同时影响主 Agent 和 `extract_highlights` 工具内部的模型调用。

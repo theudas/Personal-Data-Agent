@@ -190,6 +190,7 @@ class ToolContext:
     vector_index: FileVectorIndex
     llm_client: OpenAI
     llm_model: str
+    llm_temperature: float
     top_k: int = 5
 
 
@@ -348,7 +349,7 @@ class ToolRegistry:
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": user_input},
                 ],
-                temperature=0.2,
+                temperature=self.ctx.llm_temperature,
             )
             raw = (resp.choices[0].message.content or "").strip()
         except Exception as exc:
